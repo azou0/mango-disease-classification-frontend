@@ -1,4 +1,230 @@
-import { Image } from 'expo-image';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+
+export default function HomeScreen() {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.text}>THIS IS THE NEW SCREEN</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  text: {
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+});
+
+
+
+
+
+/* import * as ImagePicker from 'expo-image-picker';
+import React, { useState } from 'react';
+import { ActivityIndicator, Button, Image, StyleSheet, Text, View } from 'react-native';
+
+export default function HomeScreen() {
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [result, setResult] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const pickImage = async () => {
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permissionResult.granted) {
+      alert('Permission to access photos is required.');
+      return;
+    }
+
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 1,
+    });
+
+    if (!pickerResult.canceled) {
+      setImageUri(pickerResult.assets[0].uri);
+      setResult('');
+    }
+  };
+
+  const predictDisease = async () => {
+    if (!imageUri) {
+      alert('Please choose an image first.');
+      return;
+    }
+
+    setLoading(true);
+    setResult('');
+
+    setTimeout(() => {
+      setLoading(false);
+      setResult('Predicted disease: Anthracnose\nConfidence: 92%');
+    }, 2000);
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Mango Disease Detection App</Text>
+
+      <Button title="Choose an Image" onPress={pickImage} />
+
+      {imageUri ? (
+        <Image source={{ uri: imageUri }} style={styles.image} />
+      ) : (
+        <Text style={styles.placeholder}>No image selected</Text>
+      )}
+
+      <View style={styles.buttonSpacing}>
+        <Button title="Predict" onPress={predictDisease} />
+      </View>
+
+      {loading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" />
+          <Text style={styles.loadingText}>Analyzing image...</Text>
+        </View>
+      )}
+
+      {result ? <Text style={styles.result}>{result}</Text> : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  title: {
+    fontSize: 24,
+    marginBottom: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  image: {
+    width: 250,
+    height: 250,
+    marginTop: 20,
+    borderRadius: 12,
+  },
+  placeholder: {
+    marginTop: 20,
+    fontSize: 16,
+  },
+  buttonSpacing: {
+    marginTop: 20,
+    width: '60%',
+  },
+  loadingContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+  },
+  result: {
+    marginTop: 20,
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+});
+
+/*
+
+//import image
+
+import * as ImagePicker from 'expo-image-picker';
+import React, { useState } from 'react';
+import { Button, Image, StyleSheet, Text, View } from 'react-native';
+
+export default function HomeScreen() {
+  const [imageUri, setImageUri] = useState<string | null>(null);
+
+  const pickImage = async () => {
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permissionResult.granted) {
+      alert('Permission to access photos is required.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Mango Disease Detection App</Text>
+      <Button title="Choose an Image" onPress={pickImage} />
+
+      {imageUri ? (
+        <Image source={{ uri: imageUri }} style={styles.image} />
+      ) : (
+        <Text style={styles.placeholder}>No image selected</Text>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  title: {
+    fontSize: 24,
+    marginBottom: 20,
+    fontWeight: 'bold',
+  },
+  image: {
+    width: 250,
+    height: 250,
+    marginTop: 20,
+    borderRadius: 12,
+  },
+  placeholder: {
+    marginTop: 20,
+    fontSize: 16,
+  },
+});
+
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+/*import { Image } from 'expo-image';
 import { Platform, StyleSheet } from 'react-native';
 
 import { HelloWave } from '@/components/hello-wave';
@@ -96,3 +322,4 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
 });
+*/
