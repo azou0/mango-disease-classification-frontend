@@ -14,8 +14,7 @@ import React, { useState } from 'react';
 import { Button, Image, StyleSheet, Text, View } from 'react-native';
 
 export default function HomeScreen() {
-  const [loading, setLoading] = useState(false);
-  //const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageUri, setImageUri] = useState<string | null>(null);
   const [result, setResult] = useState('');
 
   const pickImage = async () => {
@@ -38,25 +37,7 @@ export default function HomeScreen() {
     }
   };
 
-
   const predictDisease = () => {
-  if (!imageUri) {
-    alert('Please pick an image first.');
-    return;
-  }
-
-  setLoading(true);
-  setResult('');
-
-  setTimeout(() => {
-    setLoading(false);
-    setResult('Predicted disease: Anthracnose | Confidence: 92%');
-  }, 2000);
-  };
-
-
-
-  /*const predictDisease = () => {
     if (!imageUri) {
       alert('Please pick an image first.');
       return;
@@ -64,7 +45,7 @@ export default function HomeScreen() {
 
     setResult('Predicted disease: Anthracnose | Confidence: 92%');
   };
-*/
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Mango App 🥭</Text>
