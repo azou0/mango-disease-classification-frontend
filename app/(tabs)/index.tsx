@@ -1,161 +1,180 @@
-/*
+import * as ImagePicker from "expo-image-picker";
+import React, { useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-Pick an image
-Display it
-Press Predict
-Show result
-
-*/
-
-
-
-import * as ImagePicker from 'expo-image-picker';
-import React, { useState } from 'react';
-import { Button, Image, StyleSheet, Text, View } from 'react-native';
+type ScreenState =
+  | "home"
+  | "preview"
+  | "loading"
+  | "healthy"
+  | "disease"
+  | "error";
 
 export default function HomeScreen() {
+  const [screen, setScreen] = useState<ScreenState>("home");
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const [result, setResult] = useState('');
+  const [diseaseName, setDiseaseName] = useState("Anthracnose");
 
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      alert('Permission needed');
-      return;
-    }
-
-    const pickerResult = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 1,
-    });
-
-    if (!pickerResult.canceled) {
-      setImageUri(pickerResult.assets[0].uri);
-      setResult('');
-    }
-  };
-
-  const predictDisease = () => {
-    if (!imageUri) {
-      alert('Please pick an image first.');
-      return;
-    }
-
-    setResult('Predicted disease: Anthracnose | Confidence: 92%');
-  };
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Mango App 🥭</Text>
-
-      <Button title="Pick Image" onPress={pickImage} />
-
-      {imageUri ? (
-        <Image source={{ uri: imageUri }} style={styles.image} />
-      ) : (
-        <Text style={styles.placeholder}>No image selected</Text>
-      )}
-
-      <View style={styles.buttonGap}>
-        <Button title="Predict" onPress={predictDisease} />
-      </View>
-
-      <View style={styles.resultBox}>
-        <Text style={styles.resultText}>
-          {result || 'Result will appear here'}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: '#fff8dc',
-  },
-  title: {
-    fontSize: 24,
-    marginBottom: 20,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  placeholder: {
-    marginTop: 20,
-    color: '#000',
-  },
-  image: {
-    width: 250,
-    height: 250,
-    marginTop: 20,
-    borderRadius: 12,
-  },
-  buttonGap: {
-    marginTop: 20,
-    width: 160,
-  },
-  resultBox: {
-    marginTop: 20,
-    padding: 12,
-    borderWidth: 2,
-    borderColor: 'black',
-    backgroundColor: 'yellow',
-    width: '100%',
-  },
-  resultText: {
-    fontSize: 18,
-    color: 'red',
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-});
-
-/*
-
-//import image
-
-import * as ImagePicker from 'expo-image-picker';
-import React, { useState } from 'react';
-import { Button, Image, StyleSheet, Text, View } from 'react-native';
-
-export default function HomeScreen() {
-  const [imageUri, setImageUri] = useState<string | null>(null);
-
-  const pickImage = async () => {
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permissionResult.granted) {
-      alert('Permission to access photos is required.');
+      setScreen("error");
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       allowsEditing: true,
       quality: 1,
     });
 
     if (!result.canceled) {
       setImageUri(result.assets[0].uri);
+      setScreen("preview");
     }
   };
 
+  const fakeScan = async () => {
+    await pickImage();
+  };
+
+  const detectDisease = () => {
+    if (!imageUri) {
+      setScreen("error");
+      return;
+    }
+
+    setScreen("loading");
+
+    setTimeout(() => {
+      // Temporary fake result
+      const outcomes: ScreenState[] = ["healthy", "disease", "error"];
+      const randomResult =
+        outcomes[Math.floor(Math.random() * outcomes.length)];
+      setDiseaseName("Anthracnose");
+      setScreen(randomResult);
+    }, 2000);
+  };
+
+  const goHome = () => {
+    setImageUri(null);
+    setScreen("home");
+  };
+
+  const renderHeader = (showReturn = false) => (
+    <View style={styles.header}>
+      {showReturn ? (
+        <TouchableOpacity onPress={goHome}>
+          <Text style={styles.returnText}>← Return</Text>
+        </TouchableOpacity>
+      ) : (
+        <Text style={styles.appTitle}>DiseaseClassifier</Text>
+      )}
+    </View>
+  );
+
+  if (screen === "home") {
+    return (
+      <View style={styles.container}>
+        {renderHeader(false)}
+
+        <View style={styles.centerContent}>
+          <TouchableOpacity style={styles.greenButton} onPress={fakeScan}>
+            <Text style={styles.buttonText}>📷 Take a photo</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.greenButton} onPress={pickImage}>
+            <Text style={styles.buttonText}>⬆️ Upload a photo</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  if (screen === "preview") {
+    return (
+      <View style={styles.container}>
+        {renderHeader(true)}
+
+        <View style={styles.centerContent}>
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={styles.previewImage} />
+          ) : (
+            <View style={styles.placeholderBox}>
+              <Text style={styles.placeholderText}>No image</Text>
+            </View>
+          )}
+
+          <TouchableOpacity style={styles.greenButton} onPress={detectDisease}>
+            <Text style={styles.buttonText}>Detect</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  if (screen === "loading") {
+    return (
+      <View style={styles.container}>
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color="#6FAF73" />
+          <Text style={styles.loadingText}>Detecting the disease...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (screen === "healthy") {
+    return (
+      <View style={styles.container}>
+        {renderHeader(true)}
+
+        <View style={styles.centerContent}>
+          {imageUri && (
+            <Image source={{ uri: imageUri }} style={styles.previewImage} />
+          )}
+          <Text style={styles.iconHealthy}>✔</Text>
+          <Text style={styles.healthyText}>Result: Healthy</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (screen === "disease") {
+    return (
+      <View style={styles.container}>
+        {renderHeader(true)}
+
+        <View style={styles.centerContent}>
+          {imageUri && (
+            <Image source={{ uri: imageUri }} style={styles.previewImage} />
+          )}
+          <Text style={styles.iconDisease}>!</Text>
+          <Text style={styles.diseaseText}>Result: {diseaseName}</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Mango Disease Detection App</Text>
-      <Button title="Choose an Image" onPress={pickImage} />
+      {renderHeader(true)}
 
-      {imageUri ? (
-        <Image source={{ uri: imageUri }} style={styles.image} />
-      ) : (
-        <Text style={styles.placeholder}>No image selected</Text>
-      )}
+      <View style={styles.centerContent}>
+        <View style={styles.errorCircle}>
+          <Text style={styles.errorX}>×</Text>
+        </View>
+        <Text style={styles.errorTitle}>Error</Text>
+        <Text style={styles.errorSubtitle}>Please try again</Text>
+      </View>
     </View>
   );
 }
@@ -163,137 +182,110 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+    backgroundColor: "#f6f6f6",
+    paddingTop: 60,
+    paddingHorizontal: 24,
   },
-  title: {
-    fontSize: 24,
-    marginBottom: 20,
-    fontWeight: 'bold',
+  header: {
+    minHeight: 40,
+    justifyContent: "center",
   },
-  image: {
-    width: 250,
-    height: 250,
-    marginTop: 20,
-    borderRadius: 12,
-  },
-  placeholder: {
-    marginTop: 20,
+  appTitle: {
     fontSize: 16,
+    color: "#7ca34d",
+    fontWeight: "600",
   },
-});
-
-
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-/*import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
-
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
-
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
-}
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  returnText: {
+    fontSize: 18,
+    color: "#000",
+    fontWeight: "600",
   },
-  stepContainer: {
-    gap: 8,
+  centerContent: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  greenButton: {
+    backgroundColor: "#2f7d32",
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    borderRadius: 6,
+    marginVertical: 12,
+    minWidth: 120,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  previewImage: {
+    width: 130,
+    height: 100,
+    resizeMode: "cover",
+    marginBottom: 28,
+    borderRadius: 4,
+    backgroundColor: "#ddd",
+  },
+  placeholderBox: {
+    width: 130,
+    height: 100,
+    backgroundColor: "#ddd",
+    marginBottom: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  placeholderText: {
+    color: "#666",
+  },
+  loadingText: {
+    marginTop: 24,
+    fontSize: 28,
+    fontFamily: undefined,
+    color: "#222",
+  },
+  iconHealthy: {
+    fontSize: 36,
+    color: "#40b95f",
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  healthyText: {
+    fontSize: 32,
+    color: "#6aa86f",
+    textAlign: "center",
+  },
+  iconDisease: {
+    fontSize: 36,
+    color: "red",
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  diseaseText: {
+    fontSize: 30,
+    color: "#d33",
+    textAlign: "center",
+  },
+  errorCircle: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: "#ffeb00",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  errorX: {
+    fontSize: 46,
+    color: "#444",
+    lineHeight: 48,
+  },
+  errorTitle: {
+    fontSize: 34,
+    color: "#111",
+    marginBottom: 6,
+  },
+  errorSubtitle: {
+    fontSize: 22,
+    color: "#222",
   },
 });
-*/
