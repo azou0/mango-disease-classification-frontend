@@ -1,3 +1,4 @@
+import ButtonPrimary from "@/components/ButtonPrimary";
 import * as ImagePicker from "expo-image-picker";
 import React, { useState } from "react";
 import {
@@ -17,6 +18,18 @@ type ScreenState =
   | "disease"
   | "error";
 
+const theme = {
+  bg: "#F6F8F4",
+  surface: "#FFFFFF",
+  primary: "#2E7D5B",
+  text: "#1A2B22",
+  muted: "#6B7C74",
+  healthy: "#2E7D5B",
+  diseased: "#E08A2B",
+  error: "#B0685C",
+  border: "#E3E9E1",
+};
+
 export default function HomeScreen() {
   const [screen, setScreen] = useState<ScreenState>("home");
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -24,26 +37,35 @@ export default function HomeScreen() {
 
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
     if (!permission.granted) {
       setScreen("error");
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
       quality: 1,
     });
-
     if (!result.canceled) {
       setImageUri(result.assets[0].uri);
       setScreen("preview");
     }
   };
 
-  const fakeScan = async () => {
-    await pickImage();
+  const takePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      setScreen("error");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 1,
+    });
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
+      setScreen("preview");
+    }
   };
 
   const detectDisease = () => {
@@ -51,11 +73,8 @@ export default function HomeScreen() {
       setScreen("error");
       return;
     }
-
     setScreen("loading");
-
     setTimeout(() => {
-      // Temporary fake result
       const outcomes: ScreenState[] = ["healthy", "disease", "error"];
       const randomResult =
         outcomes[Math.floor(Math.random() * outcomes.length)];
@@ -72,7 +91,7 @@ export default function HomeScreen() {
   const renderHeader = (showReturn = false) => (
     <View style={styles.header}>
       {showReturn ? (
-        <TouchableOpacity onPress={goHome}>
+        <TouchableOpacity onPress={goHome} hitSlop={12}>
           <Text style={styles.returnText}>← Return</Text>
         </TouchableOpacity>
       ) : (
@@ -81,100 +100,159 @@ export default function HomeScreen() {
     </View>
   );
 
+  // HOME
   if (screen === "home") {
     return (
       <View style={styles.container}>
         {renderHeader(false)}
-
         <View style={styles.centerContent}>
-          <TouchableOpacity style={styles.greenButton} onPress={fakeScan}>
-            <Text style={styles.buttonText}>📷 Take a photo</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.greenButton} onPress={pickImage}>
-            <Text style={styles.buttonText}>⬆️ Upload a photo</Text>
-          </TouchableOpacity>
+          <View style={styles.emptyPreview}>
+            <Text style={styles.emptyIcon}>🌿</Text>
+            <Text style={styles.emptyText}>Add a photo of your plant</Text>
+          </View>
+          <View style={styles.buttonGroup}>
+            <ButtonPrimary title="Take a photo" onPress={takePhoto} />
+            <ButtonPrimary
+              title="Upload a photo"
+              variant="secondary"
+              onPress={pickImage}
+            />
+          </View>
         </View>
       </View>
     );
   }
 
+  // PREVIEW
   if (screen === "preview") {
     return (
       <View style={styles.container}>
         {renderHeader(true)}
-
         <View style={styles.centerContent}>
-          {imageUri ? (
+          {imageUri && (
             <Image source={{ uri: imageUri }} style={styles.previewImage} />
-          ) : (
-            <View style={styles.placeholderBox}>
-              <Text style={styles.placeholderText}>No image</Text>
-            </View>
           )}
-
-          <TouchableOpacity style={styles.greenButton} onPress={detectDisease}>
-            <Text style={styles.buttonText}>Detect</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonGroup}>
+            <ButtonPrimary title="Detect disease" onPress={detectDisease} />
+          </View>
         </View>
       </View>
     );
   }
 
+  // LOADING
   if (screen === "loading") {
     return (
       <View style={styles.container}>
+        {renderHeader(false)}
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color="#6FAF73" />
-          <Text style={styles.loadingText}>Detecting the disease...</Text>
+          {imageUri && (
+            <Image source={{ uri: imageUri }} style={styles.previewImage} />
+          )}
+          <ActivityIndicator
+            size="large"
+            color={theme.primary}
+            style={{ marginTop: 24 }}
+          />
+          <Text style={styles.loadingText}>Analyzing leaf…</Text>
         </View>
       </View>
     );
   }
 
+  // HEALTHY
   if (screen === "healthy") {
     return (
       <View style={styles.container}>
         {renderHeader(true)}
-
         <View style={styles.centerContent}>
           {imageUri && (
             <Image source={{ uri: imageUri }} style={styles.previewImage} />
           )}
-          <Text style={styles.iconHealthy}>✔</Text>
-          <Text style={styles.healthyText}>Result: Healthy</Text>
+          <ResultCard
+            status="healthy"
+            title="Healthy"
+            subtitle="No disease detected"
+          />
+          <View style={styles.buttonGroup}>
+            <ButtonPrimary
+              title="Scan another"
+              variant="ghost"
+              onPress={goHome}
+            />
+          </View>
         </View>
       </View>
     );
   }
 
+  // DISEASE
   if (screen === "disease") {
     return (
       <View style={styles.container}>
         {renderHeader(true)}
-
         <View style={styles.centerContent}>
           {imageUri && (
             <Image source={{ uri: imageUri }} style={styles.previewImage} />
           )}
-          <Text style={styles.iconDisease}>!</Text>
-          <Text style={styles.diseaseText}>Result: {diseaseName}</Text>
+          <ResultCard
+            status="diseased"
+            title={diseaseName}
+            subtitle="Disease detected — inspect the affected leaves"
+          />
+          <View style={styles.buttonGroup}>
+            <ButtonPrimary
+              title="Scan another"
+              variant="ghost"
+              onPress={goHome}
+            />
+          </View>
         </View>
       </View>
     );
   }
 
+  // ERROR
   return (
     <View style={styles.container}>
       {renderHeader(true)}
-
       <View style={styles.centerContent}>
-        <View style={styles.errorCircle}>
-          <Text style={styles.errorX}>×</Text>
+        <ResultCard
+          status="error"
+          title="Couldn’t analyze"
+          subtitle="Try a clearer, well-lit photo of the leaf"
+        />
+        <View style={styles.buttonGroup}>
+          <ButtonPrimary title="Try again" onPress={goHome} />
         </View>
-        <Text style={styles.errorTitle}>Error</Text>
-        <Text style={styles.errorSubtitle}>Please try again</Text>
       </View>
+    </View>
+  );
+}
+
+// --- Reusable result card for the three outcomes ---
+type ResultProps = {
+  status: "healthy" | "diseased" | "error";
+  title: string;
+  subtitle: string;
+};
+
+function ResultCard({ status, title, subtitle }: ResultProps) {
+  const config = {
+    healthy: { color: theme.healthy, icon: "✔", label: "Result" },
+    diseased: { color: theme.diseased, icon: "!", label: "Result" },
+    error: { color: theme.error, icon: "×", label: "" },
+  }[status];
+
+  return (
+    <View style={styles.resultCard}>
+      <View
+        style={[styles.resultIconCircle, { backgroundColor: config.color }]}
+      >
+        <Text style={styles.resultIcon}>{config.icon}</Text>
+      </View>
+      <Text style={[styles.resultTitle, { color: config.color }]}>{title}</Text>
+      <Text style={styles.resultSubtitle}>{subtitle}</Text>
     </View>
   );
 }
@@ -182,7 +260,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f6f6f6",
+    backgroundColor: theme.bg,
     paddingTop: 60,
     paddingHorizontal: 24,
   },
@@ -191,13 +269,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   appTitle: {
-    fontSize: 16,
-    color: "#7ca34d",
-    fontWeight: "600",
+    fontSize: 18,
+    color: theme.primary,
+    fontWeight: "700",
   },
   returnText: {
-    fontSize: 18,
-    color: "#000",
+    fontSize: 17,
+    color: theme.text,
     fontWeight: "600",
   },
   centerContent: {
@@ -205,87 +283,72 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  greenButton: {
-    backgroundColor: "#2f7d32",
-    paddingVertical: 12,
-    paddingHorizontal: 22,
-    borderRadius: 6,
-    marginVertical: 12,
-    minWidth: 120,
-    alignItems: "center",
+  buttonGroup: {
+    width: "100%",
+    maxWidth: 320,
+    gap: 12,
+    marginTop: 24,
   },
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
+  emptyPreview: {
+    width: 240,
+    height: 240,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: theme.border,
+    borderStyle: "dashed",
+    backgroundColor: theme.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+  emptyIcon: {
+    fontSize: 48,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: theme.muted,
   },
   previewImage: {
-    width: 130,
-    height: 100,
+    width: 240,
+    height: 240,
     resizeMode: "cover",
-    marginBottom: 28,
-    borderRadius: 4,
-    backgroundColor: "#ddd",
-  },
-  placeholderBox: {
-    width: 130,
-    height: 100,
-    backgroundColor: "#ddd",
-    marginBottom: 28,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  placeholderText: {
-    color: "#666",
+    borderRadius: 24,
+    backgroundColor: theme.border,
   },
   loadingText: {
-    marginTop: 24,
-    fontSize: 28,
-    fontFamily: undefined,
-    color: "#222",
+    marginTop: 20,
+    fontSize: 20,
+    color: theme.text,
+    fontWeight: "500",
   },
-  iconHealthy: {
-    fontSize: 36,
-    color: "#40b95f",
-    marginBottom: 8,
+  resultCard: {
+    alignItems: "center",
+    marginTop: 28,
+    paddingHorizontal: 16,
   },
-  healthyText: {
-    fontSize: 32,
-    color: "#6aa86f",
-    textAlign: "center",
-  },
-  iconDisease: {
-    fontSize: 36,
-    color: "red",
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  diseaseText: {
-    fontSize: 30,
-    color: "#d33",
-    textAlign: "center",
-  },
-  errorCircle: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: "#ffeb00",
+  resultIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  errorX: {
-    fontSize: 46,
-    color: "#444",
-    lineHeight: 48,
+  resultIcon: {
+    fontSize: 38,
+    color: "#FFFFFF",
+    fontWeight: "700",
+    lineHeight: 40,
   },
-  errorTitle: {
-    fontSize: 34,
-    color: "#111",
+  resultTitle: {
+    fontSize: 28,
+    fontWeight: "700",
+    textAlign: "center",
     marginBottom: 6,
   },
-  errorSubtitle: {
-    fontSize: 22,
-    color: "#222",
+  resultSubtitle: {
+    fontSize: 16,
+    color: theme.muted,
+    textAlign: "center",
   },
 });
