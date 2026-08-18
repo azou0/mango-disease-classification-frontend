@@ -18,7 +18,7 @@ type ScreenState =
   | "disease"
   | "error";
 
-const theme = {
+/*const theme = {
   bg: "#F6F8F4",
   surface: "#FFFFFF",
   primary: "#2E7D5B",
@@ -28,6 +28,24 @@ const theme = {
   diseased: "#E08A2B",
   error: "#B0685C",
   border: "#E3E9E1",
+};
+*/
+
+const theme = {
+  // Base
+  primary: "#4A7C2E", // Field Green
+  bg: "#F5F1E6", // Cream
+  text: "#3B2F2A", // Soil Brown
+
+  // Results
+  healthy: "#3E8E41", // clear positive green
+  diseased: "#B23A3A", // muted red
+  error: "#C4622D", // terracotta
+
+  //  (needed by the UI)
+  surface: "#FFFFFF", // cards / image frames
+  muted: "#7A6E64", // soft soil brown for subtitles
+  border: "#E4DCC8", // warm border on cream
 };
 
 export default function HomeScreen() {
@@ -154,7 +172,7 @@ export default function HomeScreen() {
             color={theme.primary}
             style={{ marginTop: 24 }}
           />
-          <Text style={styles.loadingText}>Analyzing leaf…</Text>
+          <Text style={styles.loadingText}>Detecting the disease...</Text>
         </View>
       </View>
     );
