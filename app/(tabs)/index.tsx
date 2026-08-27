@@ -237,8 +237,8 @@ export default function HomeScreen() {
       <View style={styles.centerContent}>
         <ResultCard
           status="error"
-          title="Couldn’t analyze"
-          subtitle="Try a clearer, well-lit photo of the leaf"
+          title="Error"
+          subtitle="Please try again"
         />
         <View style={styles.buttonGroup}>
           <ButtonPrimary title="Try again" onPress={goHome} />
