@@ -1,5 +1,7 @@
+//router import
 import ButtonPrimary from "@/components/ButtonPrimary";
 import * as ImagePicker from "expo-image-picker";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -134,6 +136,11 @@ export default function HomeScreen() {
               title="Upload a photo"
               variant="secondary"
               onPress={pickImage}
+            />
+            <ButtonPrimary
+              title="Account"
+              variant="ghost"
+              onPress={() => router.push("/login")}
             />
           </View>
         </View>
