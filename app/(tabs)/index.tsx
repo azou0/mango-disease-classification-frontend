@@ -216,7 +216,7 @@ export default function HomeScreen() {
           <ResultCard
             status="diseased"
             title={diseaseName}
-            subtitle="Disease detected — inspect the affected leaves"
+            subtitle="Disease detected"
           />
           <View style={styles.buttonGroup}>
             <ButtonPrimary
@@ -235,11 +235,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       {renderHeader(true)}
       <View style={styles.centerContent}>
-        <ResultCard
-          status="error"
-          title="Error"
-          subtitle="Please try again"
-        />
+        <ResultCard status="error" title="Error" subtitle="Please try again" />
         <View style={styles.buttonGroup}>
           <ButtonPrimary title="Try again" onPress={goHome} />
         </View>
