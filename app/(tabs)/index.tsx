@@ -1,8 +1,9 @@
-//router import
 import ButtonPrimary from "@/components/ButtonPrimary";
+import { clearSession, getSession, type User } from "@/constants/auth";
+import { useFocusEffect } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -20,19 +21,6 @@ type ScreenState =
   | "disease"
   | "error";
 
-/*const theme = {
-  bg: "#F6F8F4",
-  surface: "#FFFFFF",
-  primary: "#2E7D5B",
-  text: "#1A2B22",
-  muted: "#6B7C74",
-  healthy: "#2E7D5B",
-  diseased: "#E08A2B",
-  error: "#B0685C",
-  border: "#E3E9E1",
-};
-*/
-
 const theme = {
   // Base
   primary: "#4A7C2E", // Field Green
@@ -44,7 +32,7 @@ const theme = {
   diseased: "#B23A3A", // muted red
   error: "#C4622D", // terracotta
 
-  //  (needed by the UI)
+  // Needed by the UI
   surface: "#FFFFFF", // cards / image frames
   muted: "#7A6E64", // soft soil brown for subtitles
   border: "#E4DCC8", // warm border on cream
@@ -54,6 +42,19 @@ export default function HomeScreen() {
   const [screen, setScreen] = useState<ScreenState>("home");
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [diseaseName, setDiseaseName] = useState("Anthracnose");
+  const [user, setUser] = useState<User | null>(null);
+
+  // Re-check the session each time this screen regains focus
+  useFocusEffect(
+    useCallback(() => {
+      getSession().then(setUser);
+    }, []),
+  );
+
+  const handleLogout = async () => {
+    await clearSession();
+    setUser(null);
+  };
 
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -88,6 +89,7 @@ export default function HomeScreen() {
     }
   };
 
+  // Mockup detection
   const detectDisease = () => {
     if (!imageUri) {
       setScreen("error");
@@ -137,11 +139,24 @@ export default function HomeScreen() {
               variant="secondary"
               onPress={pickImage}
             />
-            <ButtonPrimary
-              title="Account"
-              variant="ghost"
-              onPress={() => router.push("/login")}
-            />
+            {user ? (
+              <>
+                <Text style={styles.signedInText}>
+                  Signed in as {user.name}
+                </Text>
+                <ButtonPrimary
+                  title="Log out"
+                  variant="ghost"
+                  onPress={handleLogout}
+                />
+              </>
+            ) : (
+              <ButtonPrimary
+                title="Account"
+                variant="ghost"
+                onPress={() => router.push("/login")}
+              />
+            )}
           </View>
         </View>
       </View>
@@ -309,6 +324,12 @@ const styles = StyleSheet.create({
     maxWidth: 320,
     gap: 12,
     marginTop: 24,
+  },
+  signedInText: {
+    fontSize: 15,
+    color: theme.muted,
+    textAlign: "center",
+    marginBottom: 4,
   },
   emptyPreview: {
     width: 240,

@@ -1,3 +1,12 @@
+import { loginUser, setSession } from "@/constants/auth";
+//import { loginUser } from "@/constants/auth";
+
+// Predefined user credentials (mock)
+const VALID_USERS = [
+  { email: "testuser1@example.com", password: "12345" },
+  { email: "testuser2@example.com", password: "12345" },
+];
+
 import ButtonPrimary from "@/components/ButtonPrimary";
 import { router } from "expo-router";
 import React, { useState } from "react";
@@ -24,12 +33,21 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleLogin = () => {
+  //mock login function
+
+  const handleLogin = async () => {
     if (!email || !password) {
       setError("Please enter your email and password.");
       return;
     }
-    // Mock login — accepts anything
+
+    const result = await loginUser(email, password);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+
+    await setSession(email); // <-- remember this user
     router.replace("/(tabs)");
   };
 
@@ -65,6 +83,12 @@ export default function LoginScreen() {
         <TouchableOpacity onPress={() => router.push("/register")} hitSlop={12}>
           <Text style={styles.switchText}>No account? Create one</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => router.replace("/(tabs)")}
+          hitSlop={12}
+        >
+          <Text style={styles.guestText}>Continue as guest →</Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
@@ -74,6 +98,13 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
+  guestText: {
+    color: theme.muted,
+    fontSize: 15,
+    fontWeight: "600",
+    textAlign: "center",
+    marginTop: 16,
+  },
   container: {
     flex: 1,
     backgroundColor: theme.bg,
