@@ -5,8 +5,10 @@ const SESSION_KEY = "current_user";
 
 export type User = { name: string; email: string; password: string };
 
+//test account
 const SEED_USERS: User[] = [
-  { name: "Test", email: "test@plant.com", password: "1234" },
+  { name: "Test User 1", email: "testuser1@example.com", password: "12345" },
+  { name: "Test User 2", email: "testuser2@example.com", password: "12345" },
 ];
 
 async function getUsers(): Promise<User[]> {
@@ -46,7 +48,7 @@ export async function loginUser(email: string, password: string) {
   const match = users.find(
     (u) =>
       u.email.toLowerCase() === email.trim().toLowerCase() &&
-      u.password === password
+      u.password === password,
   );
   if (!match) {
     return { ok: false as const, error: "Invalid email or password." };

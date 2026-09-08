@@ -133,6 +133,11 @@ export default function HomeScreen() {
             <Text style={styles.emptyText}>Add a photo of your plant</Text>
           </View>
           <View style={styles.buttonGroup}>
+            <ButtonPrimary
+              title="Nearby cases"
+              variant="secondary"
+              onPress={() => router.push("/nearby")}
+            />
             <ButtonPrimary title="Take a photo" onPress={takePhoto} />
             <ButtonPrimary
               title="Upload a photo"
