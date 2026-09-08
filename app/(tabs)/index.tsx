@@ -1,14 +1,17 @@
 import ButtonPrimary from "@/components/ButtonPrimary";
 import { clearSession, getSession, type User } from "@/constants/auth";
-import { useFocusEffect } from "@react-navigation/native";
+import { addCase } from "@/constants/case";
 import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
-import React, { useCallback, useState } from "react";
+import * as Location from "expo-location";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -22,20 +25,15 @@ type ScreenState =
   | "error";
 
 const theme = {
-  // Base
-  primary: "#4A7C2E", // Field Green
-  bg: "#F5F1E6", // Cream
-  text: "#3B2F2A", // Soil Brown
-
-  // Results
-  healthy: "#3E8E41", // clear positive green
-  diseased: "#B23A3A", // muted red
-  error: "#C4622D", // terracotta
-
-  // Needed by the UI
-  surface: "#FFFFFF", // cards / image frames
-  muted: "#7A6E64", // soft soil brown for subtitles
-  border: "#E4DCC8", // warm border on cream
+  primary: "#4A7C2E",
+  bg: "#F5F1E6",
+  text: "#3B2F2A",
+  healthy: "#3E8E41",
+  diseased: "#B23A3A",
+  error: "#C4622D",
+  surface: "#FFFFFF",
+  muted: "#7A6E64",
+  border: "#E4DCC8",
 };
 
 export default function HomeScreen() {
@@ -43,8 +41,9 @@ export default function HomeScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [diseaseName, setDiseaseName] = useState("Anthracnose");
   const [user, setUser] = useState<User | null>(null);
+  const [suburb, setSuburb] = useState("");
+  const [uploaded, setUploaded] = useState(false);
 
-  // Re-check the session each time this screen regains focus
   useFocusEffect(
     useCallback(() => {
       getSession().then(setUser);
@@ -89,7 +88,17 @@ export default function HomeScreen() {
     }
   };
 
-  // Mockup detection
+  const detectSuburb = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") return;
+      const loc = await Location.getCurrentPositionAsync({});
+      const [place] = await Location.reverseGeocodeAsync(loc.coords);
+      const detected = place?.subregion || place?.city || place?.district || "";
+      if (detected) setSuburb(detected);
+    } catch {}
+  };
+
   const detectDisease = () => {
     if (!imageUri) {
       setScreen("error");
@@ -101,8 +110,17 @@ export default function HomeScreen() {
       const randomResult =
         outcomes[Math.floor(Math.random() * outcomes.length)];
       setDiseaseName("Anthracnose");
+      setUploaded(false);
+      if (randomResult === "disease") {
+        detectSuburb();
+      }
       setScreen(randomResult);
     }, 2000);
+  };
+
+  const handleUpload = async () => {
+    await addCase(diseaseName, suburb || "Unknown");
+    setUploaded(true);
   };
 
   const goHome = () => {
@@ -133,16 +151,16 @@ export default function HomeScreen() {
             <Text style={styles.emptyText}>Add a photo of your plant</Text>
           </View>
           <View style={styles.buttonGroup}>
-            <ButtonPrimary
-              title="Nearby cases"
-              variant="secondary"
-              onPress={() => router.push("/nearby")}
-            />
             <ButtonPrimary title="Take a photo" onPress={takePhoto} />
             <ButtonPrimary
               title="Upload a photo"
               variant="secondary"
               onPress={pickImage}
+            />
+            <ButtonPrimary
+              title="Nearby cases"
+              variant="secondary"
+              onPress={() => router.push("/nearby")}
             />
             {user ? (
               <>
@@ -236,7 +254,10 @@ export default function HomeScreen() {
     return (
       <View style={styles.container}>
         {renderHeader(true)}
-        <View style={styles.centerContent}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {imageUri && (
             <Image source={{ uri: imageUri }} style={styles.previewImage} />
           )}
@@ -245,6 +266,22 @@ export default function HomeScreen() {
             title={diseaseName}
             subtitle="Disease detected"
           />
+          {uploaded ? (
+            <Text style={styles.uploadedText}>✔ Uploaded to nearby cases</Text>
+          ) : (
+            <View style={styles.buttonGroup}>
+              <Text style={styles.uploadLabel}>Suburb for this report</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter suburb"
+                placeholderTextColor={theme.muted}
+                value={suburb}
+                onChangeText={setSuburb}
+                autoCapitalize="words"
+              />
+              <ButtonPrimary title="Upload this case" onPress={handleUpload} />
+            </View>
+          )}
           <View style={styles.buttonGroup}>
             <ButtonPrimary
               title="Scan another"
@@ -252,7 +289,7 @@ export default function HomeScreen() {
               onPress={goHome}
             />
           </View>
-        </View>
+        </ScrollView>
       </View>
     );
   }
@@ -271,7 +308,6 @@ export default function HomeScreen() {
   );
 }
 
-// --- Reusable result card for the three outcomes ---
 type ResultProps = {
   status: "healthy" | "diseased" | "error";
   title: string;
@@ -324,6 +360,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  scrollContent: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingBottom: 40,
+    flexGrow: 1,
+  },
   buttonGroup: {
     width: "100%",
     maxWidth: 320,
@@ -367,6 +409,31 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: theme.text,
     fontWeight: "500",
+  },
+  uploadLabel: {
+    fontSize: 14,
+    color: theme.muted,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: theme.surface,
+    borderWidth: 1.5,
+    borderColor: theme.border,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: theme.text,
+    marginBottom: 12,
+    width: "100%",
+  },
+  uploadedText: {
+    fontSize: 16,
+    color: theme.healthy,
+    fontWeight: "600",
+    textAlign: "center",
+    marginTop: 20,
   },
   resultCard: {
     alignItems: "center",
