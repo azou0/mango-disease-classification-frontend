@@ -1,53 +1,47 @@
-import { loginUser, setSession } from "@/constants/auth";
-//import { loginUser } from "@/constants/auth";
-
-// Predefined user credentials (mock)
-const VALID_USERS = [
-  { email: "testuser1@example.com", password: "12345" },
-  { email: "testuser2@example.com", password: "12345" },
-];
-
 import ButtonPrimary from "@/components/ButtonPrimary";
+import { apiLogin } from "@/constants/api";
+import { setSession } from "@/constants/auth";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const theme = {
-  bg: "#F6F8F4",
+  primary: "#4A7C2E",
+  bg: "#F5F1E6",
+  text: "#3B2F2A",
   surface: "#FFFFFF",
-  primary: "#2E7D5B",
-  text: "#1A2B22",
-  muted: "#6B7C74",
-  border: "#E3E9E1",
+  muted: "#7A6E64",
+  border: "#E4DCC8",
   error: "#B0685C",
 };
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-
-  //mock login function
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      setError("Please enter your email and password.");
+    if (!username || !password) {
+      setError("Please enter your username and password.");
       return;
     }
+    setError("");
+    setLoading(true);
+    const result = await apiLogin(username, password);
+    setLoading(false);
 
-    const result = await loginUser(email, password);
     if (!result.ok) {
-      setError(result.error);
+      setError(result.error || "Login failed.");
       return;
     }
-
-    await setSession(email); // <-- remember this user
+    await setSession(username);
     router.replace("/(tabs)");
   };
 
@@ -58,11 +52,10 @@ export default function LoginScreen() {
 
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder="Username"
           placeholderTextColor={theme.muted}
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
+          value={username}
+          onChangeText={setUsername}
           autoCapitalize="none"
         />
         <TextInput
@@ -77,7 +70,11 @@ export default function LoginScreen() {
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
         <View style={styles.buttonGroup}>
-          <ButtonPrimary title="Log in" onPress={handleLogin} />
+          <ButtonPrimary
+            title="Log in"
+            loading={loading}
+            onPress={handleLogin}
+          />
         </View>
 
         <TouchableOpacity onPress={() => router.push("/register")} hitSlop={12}>
@@ -98,13 +95,6 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  guestText: {
-    color: theme.muted,
-    fontSize: 15,
-    fontWeight: "600",
-    textAlign: "center",
-    marginTop: 16,
-  },
   container: {
     flex: 1,
     backgroundColor: theme.bg,
@@ -149,6 +139,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
     marginTop: 20,
+  },
+  guestText: {
+    color: theme.muted,
+    fontSize: 15,
+    fontWeight: "600",
+    textAlign: "center",
+    marginTop: 16,
   },
   backText: {
     color: theme.muted,

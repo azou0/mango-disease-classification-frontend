@@ -1,8 +1,12 @@
 import ButtonPrimary from "@/components/ButtonPrimary";
+import {
+  classifyImage,
+  DetectError,
+  type DetectErrorCode,
+  type Recommendation,
+} from "@/constants/api";
 import { clearSession, getSession, type User } from "@/constants/auth";
-import { addCase } from "@/constants/case";
 import * as ImagePicker from "expo-image-picker";
-import * as Location from "expo-location";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -11,7 +15,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -40,9 +43,12 @@ export default function HomeScreen() {
   const [screen, setScreen] = useState<ScreenState>("home");
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [diseaseName, setDiseaseName] = useState("Anthracnose");
+  const [confidence, setConfidence] = useState<number | null>(null);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [decisionMessage, setDecisionMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [errorCode, setErrorCode] = useState<DetectErrorCode | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [suburb, setSuburb] = useState("");
-  const [uploaded, setUploaded] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -88,43 +94,42 @@ export default function HomeScreen() {
     }
   };
 
-  const detectSuburb = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") return;
-      const loc = await Location.getCurrentPositionAsync({});
-      const [place] = await Location.reverseGeocodeAsync(loc.coords);
-      const detected = place?.subregion || place?.city || place?.district || "";
-      if (detected) setSuburb(detected);
-    } catch {}
-  };
-
-  const detectDisease = () => {
+  // Real classification: preprocess + upload (with optional location) + poll.
+  // Reporting to nearby cases happens automatically server-side when the
+  // upload includes coordinates and the result is a disease.
+  const detectDisease = async () => {
     if (!imageUri) {
       setScreen("error");
       return;
     }
     setScreen("loading");
-    setTimeout(() => {
-      const outcomes: ScreenState[] = ["healthy", "disease", "error"];
-      const randomResult =
-        outcomes[Math.floor(Math.random() * outcomes.length)];
-      setDiseaseName("Anthracnose");
-      setUploaded(false);
-      if (randomResult === "disease") {
-        detectSuburb();
-      }
-      setScreen(randomResult);
-    }, 2000);
-  };
 
-  const handleUpload = async () => {
-    await addCase(diseaseName, suburb || "Unknown");
-    setUploaded(true);
+    try {
+      const result = await classifyImage(imageUri);
+      setDiseaseName(result.disease);
+      setConfidence(result.confidence);
+      setRecommendations(result.recommendations);
+      setDecisionMessage(result.decisionMessage);
+      setScreen(result.status === "disease" ? "disease" : "healthy");
+    } catch (e) {
+      if (e instanceof DetectError) {
+        setErrorCode(e.code);
+        setErrorMessage(e.message);
+      } else {
+        setErrorCode("unknown");
+        setErrorMessage("Something went wrong. Please try again.");
+      }
+      setScreen("error");
+    }
   };
 
   const goHome = () => {
     setImageUri(null);
+    setConfidence(null);
+    setRecommendations([]);
+    setDecisionMessage("");
+    setErrorMessage("");
+    setErrorCode(null);
     setScreen("home");
   };
 
@@ -139,6 +144,9 @@ export default function HomeScreen() {
       )}
     </View>
   );
+
+  const confidenceLabel =
+    confidence != null ? `${Math.round(confidence * 100)}% confidence` : "";
 
   // HOME
   if (screen === "home") {
@@ -161,6 +169,11 @@ export default function HomeScreen() {
               title="Nearby cases"
               variant="secondary"
               onPress={() => router.push("/nearby")}
+            />
+            <ButtonPrimary
+              title="Scan history"
+              variant="secondary"
+              onPress={() => router.push("/history")}
             />
             {user ? (
               <>
@@ -217,7 +230,7 @@ export default function HomeScreen() {
             color={theme.primary}
             style={{ marginTop: 24 }}
           />
-          <Text style={styles.loadingText}>Detecting the disease...</Text>
+          <Text style={styles.loadingText}>Analyzing leaf...</Text>
         </View>
       </View>
     );
@@ -235,7 +248,7 @@ export default function HomeScreen() {
           <ResultCard
             status="healthy"
             title="Healthy"
-            subtitle="No disease detected"
+            subtitle={confidenceLabel || "No disease detected"}
           />
           <View style={styles.buttonGroup}>
             <ButtonPrimary
@@ -264,24 +277,51 @@ export default function HomeScreen() {
           <ResultCard
             status="diseased"
             title={diseaseName}
-            subtitle="Disease detected"
+            subtitle={confidenceLabel || "Disease detected"}
           />
-          {uploaded ? (
-            <Text style={styles.uploadedText}>✔ Uploaded to nearby cases</Text>
-          ) : (
-            <View style={styles.buttonGroup}>
-              <Text style={styles.uploadLabel}>Suburb for this report</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter suburb"
-                placeholderTextColor={theme.muted}
-                value={suburb}
-                onChangeText={setSuburb}
-                autoCapitalize="words"
-              />
-              <ButtonPrimary title="Upload this case" onPress={handleUpload} />
+          <Text style={styles.reportNote}>
+            This result has been added to nearby cases.
+          </Text>
+
+          {recommendations.map((rec) => (
+            <View key={rec.label} style={styles.adviceCard}>
+              <Text style={styles.adviceTitle}>{rec.display_name}</Text>
+              {rec.severity ? (
+                <Text style={styles.adviceMeta}>
+                  {rec.category} · Severity: {rec.severity}
+                </Text>
+              ) : null}
+
+              {rec.advice?.length > 0 && (
+                <>
+                  <Text style={styles.adviceHeading}>Treatment</Text>
+                  {rec.advice.map((a, i) => (
+                    <Text key={i} style={styles.adviceItem}>
+                      • {a}
+                    </Text>
+                  ))}
+                </>
+              )}
+
+              {rec.prevention?.length > 0 && (
+                <>
+                  <Text style={styles.adviceHeading}>Prevention</Text>
+                  {rec.prevention.map((p, i) => (
+                    <Text key={i} style={styles.adviceItem}>
+                      • {p}
+                    </Text>
+                  ))}
+                </>
+              )}
+
+              {rec.pesticide ? (
+                <>
+                  <Text style={styles.adviceHeading}>Suggested pesticide</Text>
+                  <Text style={styles.adviceItem}>{rec.pesticide}</Text>
+                </>
+              ) : null}
             </View>
-          )}
+          ))}
           <View style={styles.buttonGroup}>
             <ButtonPrimary
               title="Scan another"
@@ -295,13 +335,40 @@ export default function HomeScreen() {
   }
 
   // ERROR
+  const errorTitle =
+    errorCode === "not_logged_in"
+      ? "Login required"
+      : errorCode === "invalid_image" || errorCode === "no_image"
+        ? "Image problem"
+        : errorCode === "image_too_large"
+          ? "Image too large"
+          : errorCode === "network"
+            ? "Connection problem"
+            : errorCode === "timeout"
+              ? "Took too long"
+              : "Error";
+
   return (
     <View style={styles.container}>
       {renderHeader(true)}
       <View style={styles.centerContent}>
-        <ResultCard status="error" title="Error" subtitle="Please try again" />
+        <ResultCard
+          status="error"
+          title={errorTitle}
+          subtitle={errorMessage || "Something went wrong. Please try again."}
+        />
         <View style={styles.buttonGroup}>
-          <ButtonPrimary title="Try again" onPress={goHome} />
+          {errorCode === "not_logged_in" ? (
+            <ButtonPrimary
+              title="Log in"
+              onPress={() => router.push("/login")}
+            />
+          ) : null}
+          <ButtonPrimary
+            title="Try again"
+            variant={errorCode === "not_logged_in" ? "ghost" : "primary"}
+            onPress={goHome}
+          />
         </View>
       </View>
     </View>
@@ -410,30 +477,45 @@ const styles = StyleSheet.create({
     color: theme.text,
     fontWeight: "500",
   },
-  uploadLabel: {
+  reportNote: {
     fontSize: 14,
     color: theme.muted,
     textAlign: "center",
-    marginBottom: 8,
+    marginTop: 16,
+    paddingHorizontal: 24,
   },
-  input: {
+  adviceCard: {
     backgroundColor: theme.surface,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: theme.border,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    color: theme.text,
-    marginBottom: 12,
-    width: "100%",
-  },
-  uploadedText: {
-    fontSize: 16,
-    color: theme.healthy,
-    fontWeight: "600",
-    textAlign: "center",
+    borderRadius: 16,
+    padding: 18,
     marginTop: 20,
+    width: "100%",
+    maxWidth: 340,
+  },
+  adviceTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: theme.text,
+    marginBottom: 2,
+  },
+  adviceMeta: {
+    fontSize: 13,
+    color: theme.muted,
+    marginBottom: 10,
+  },
+  adviceHeading: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.primary,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  adviceItem: {
+    fontSize: 14,
+    color: theme.text,
+    lineHeight: 20,
   },
   resultCard: {
     alignItems: "center",

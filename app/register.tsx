@@ -1,33 +1,34 @@
 import ButtonPrimary from "@/components/ButtonPrimary";
+import { apiRegister } from "@/constants/api";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const theme = {
-  bg: "#F6F8F4",
+  primary: "#4A7C2E",
+  bg: "#F5F1E6",
+  text: "#3B2F2A",
   surface: "#FFFFFF",
-  primary: "#2E7D5B",
-  text: "#1A2B22",
-  muted: "#6B7C74",
-  border: "#E3E9E1",
+  muted: "#7A6E64",
+  border: "#E4DCC8",
   error: "#B0685C",
 };
 
 export default function RegisterScreen() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
-    if (!name || !email || !password) {
+  const handleRegister = async () => {
+    if (!username || !password) {
       setError("Please fill in all fields.");
       return;
     }
@@ -35,8 +36,17 @@ export default function RegisterScreen() {
       setError("Passwords do not match.");
       return;
     }
-    // Mock register — accepts anything
-    router.replace("/(tabs)");
+    setError("");
+    setLoading(true);
+    const result = await apiRegister(username, password);
+    setLoading(false);
+
+    if (!result.ok) {
+      setError(result.error || "Registration failed.");
+      return;
+    }
+    // registered. go to login to sign in
+    router.replace("/login");
   };
 
   return (
@@ -46,19 +56,10 @@ export default function RegisterScreen() {
 
         <TextInput
           style={styles.input}
-          placeholder="Name"
+          placeholder="Username"
           placeholderTextColor={theme.muted}
-          value={name}
-          onChangeText={setName}
-          autoCapitalize="words"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor={theme.muted}
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
+          value={username}
+          onChangeText={setUsername}
           autoCapitalize="none"
         />
         <TextInput
@@ -81,7 +82,11 @@ export default function RegisterScreen() {
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
         <View style={styles.buttonGroup}>
-          <ButtonPrimary title="Sign up" onPress={handleRegister} />
+          <ButtonPrimary
+            title="Sign up"
+            loading={loading}
+            onPress={handleRegister}
+          />
         </View>
 
         <TouchableOpacity onPress={() => router.push("/login")} hitSlop={12}>
