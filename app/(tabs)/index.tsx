@@ -230,7 +230,7 @@ export default function HomeScreen() {
             color={theme.primary}
             style={{ marginTop: 24 }}
           />
-          <Text style={styles.loadingText}>Analyzing leaf...</Text>
+          <Text style={styles.loadingText}>Analysing the image...</Text>
         </View>
       </View>
     );
